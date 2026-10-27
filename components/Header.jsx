@@ -238,14 +238,14 @@ export default function Header({
 											</p>
 										</div>
 										<Link
-											href="/my-reports"
+											href={user.role === "citizen" ? "/my-reports" : "/admin"}
 											role="menuitem"
 											onClick={() => setIsMenuOpen(false)}
 											className={`block rounded-lg px-3 py-2 text-xs ${
 												isLightTheme ? "hover:bg-slate-50" : "hover:bg-white/5"
 											}`}
 										>
-											Laporan saya
+											{user.role === "citizen" ? "Laporan saya" : "Ringkasan petugas"}
 										</Link>
 										<button
 											type="button"

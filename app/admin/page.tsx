@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import RequireUser from "@/components/RequireUser";
 import PortalLayout from "@/components/PortalLayout";
-import { useTheme } from "@/components/providers/AppProviders";
+import { useAuth, useTheme } from "@/components/providers/AppProviders";
 import Alert from "@/components/ui/Alert";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeading from "@/components/ui/PageHeading";
@@ -12,14 +12,30 @@ import Panel from "@/components/ui/Panel";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { apiRequest, type DashboardStats, type Report } from "@/lib/backend";
 
+type PriorityStat = DashboardStats["by_priority"][number];
+
+/**
+ * Sebagian respons backend mengirim `by_priority` sebagai object ber-key
+ * prioritas ({"darurat": {...}}) alih-alih array. Normalisasi di sini supaya
+ * render tidak gagal saat `.map()` dipanggil.
+ */
+function normalizePriorityStats(value: unknown): PriorityStat[] {
+	if (Array.isArray(value)) return value as PriorityStat[];
+	return Object.values((value as Record<string, PriorityStat> | null) ?? {});
+}
+
 export default function AdminDashboardPage() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [reports, setReports] = useState<Report[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState("");
 	const { isLightTheme } = useTheme();
+	const { user } = useAuth();
 
 	useEffect(() => {
+		// Tunggu sesi petugas siap: mencegah request 401/403 sebelum RequireUser
+		// selesai memeriksa, yang tadinya memicu pesan "Sesi Anda berakhir".
+		if (!user || user.role === "citizen") return;
 		let isMounted = true;
 		Promise.all([
 			apiRequest<DashboardStats>("stats/summary"),
@@ -27,8 +43,13 @@ export default function AdminDashboardPage() {
 		])
 			.then(([statsResponse, reportsResponse]) => {
 				if (!isMounted) return;
-				setStats(statsResponse.data);
+				const statsData = statsResponse.data;
+				setStats({
+					...statsData,
+					by_priority: normalizePriorityStats(statsData.by_priority),
+				});
 				setReports(reportsResponse.data);
+				setError("");
 			})
 			.catch((cause: unknown) => {
 				if (isMounted)
@@ -44,7 +65,7 @@ export default function AdminDashboardPage() {
 		return () => {
 			isMounted = false;
 		};
-	}, []);
+	}, [user]);
 
 	const metrics = stats
 		? [

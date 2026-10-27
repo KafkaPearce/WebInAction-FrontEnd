@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import RequireUser from "@/components/RequireUser";
 import PortalLayout from "@/components/PortalLayout";
-import { useTheme } from "@/components/providers/AppProviders";
+import { useAuth, useTheme } from "@/components/providers/AppProviders";
 import Alert from "@/components/ui/Alert";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeading from "@/components/ui/PageHeading";
@@ -25,8 +25,10 @@ export default function AdminReportDetailPage({ id }: { id: string }) {
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
 	const { isLightTheme } = useTheme();
+	const { user } = useAuth();
 
 	useEffect(() => {
+		if (!user || user.role === "citizen") return;
 		const controller = new AbortController();
 		Promise.all([
 			apiRequest<Report>(`reports/${encodeURIComponent(id)}`, {
@@ -44,6 +46,7 @@ export default function AdminReportDetailPage({ id }: { id: string }) {
 							"",
 					),
 				);
+				setError("");
 			})
 			.catch((cause: unknown) => {
 				if (!controller.signal.aborted)
@@ -57,7 +60,7 @@ export default function AdminReportDetailPage({ id }: { id: string }) {
 				if (!controller.signal.aborted) setIsLoading(false);
 			});
 		return () => controller.abort();
-	}, [id]);
+	}, [id, user]);
 
 	async function handleAction(
 		event: FormEvent<HTMLFormElement>,

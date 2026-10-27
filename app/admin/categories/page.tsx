@@ -26,6 +26,7 @@ export default function AdminCategoriesPage() {
 		try {
 			const response = await apiRequest<Category[]>("categories?with_counts=1");
 			setCategories(response.data);
+			setError("");
 		} catch (cause) {
 			setError(
 				cause instanceof Error

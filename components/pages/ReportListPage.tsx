@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import RequireUser from "@/components/RequireUser";
 import PortalLayout from "@/components/PortalLayout";
-import { useTheme } from "@/components/providers/AppProviders";
+import { useAuth, useTheme } from "@/components/providers/AppProviders";
 import EmptyState from "@/components/ui/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
 import PageHeading from "@/components/ui/PageHeading";
@@ -29,21 +29,33 @@ type ListConfig = {
 	requireCitizen?: boolean;
 };
 
-export default function ReportListPage({
+export default function ReportListPage(config: ListConfig) {
+	const params = useSearchParams();
+	const searchParam = params.get("search") ?? "";
+
+	// `key` membuat komponen di-remount saat kata kunci URL berubah, sehingga
+	// pencarian dari Header ikut terpakai tanpa setState di dalam effect.
+	return (
+		<ReportListContent key={searchParam} {...config} initialSearch={searchParam} />
+	);
+}
+
+function ReportListContent({
 	title,
 	description,
 	endpoint,
 	requireCitizen = false,
-}: ListConfig) {
+	initialSearch,
+}: ListConfig & { initialSearch: string }) {
 	const { isLightTheme } = useTheme();
-	const params = useSearchParams();
+	const { user } = useAuth();
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [reports, setReports] = useState<Report[]>([]);
 	const [meta, setMeta] = useState<PaginationMeta | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState("");
-	const [search, setSearch] = useState(params.get("search") ?? "");
-	const [appliedSearch, setAppliedSearch] = useState(params.get("search") ?? "");
+	const [search, setSearch] = useState(initialSearch);
+	const [appliedSearch, setAppliedSearch] = useState(initialSearch);
 	const [categoryId, setCategoryId] = useState("");
 	const [status, setStatus] = useState("");
 	const [priority, setPriority] = useState("");
@@ -62,6 +74,8 @@ export default function ReportListPage({
 	}, []);
 
 	useEffect(() => {
+		// Endpoint "reports/my" butuh sesi; tunggu auth siap agar tidak 401.
+		if (endpoint === "reports/my" && !user) return;
 		const controller = new AbortController();
 		const query = toQueryString({
 			search: appliedSearch,
@@ -80,6 +94,7 @@ export default function ReportListPage({
 				}
 				setReports(response.data);
 				setMeta(response.meta);
+				setError("");
 			})
 			.catch((cause: unknown) => {
 				if (!controller.signal.aborted)
@@ -93,7 +108,7 @@ export default function ReportListPage({
 				if (!controller.signal.aborted) setIsLoading(false);
 			});
 		return () => controller.abort();
-	}, [appliedSearch, categoryId, endpoint, page, status, priority]);
+	}, [appliedSearch, categoryId, endpoint, page, status, priority, user]);
 
 	function handleSearch(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();

@@ -106,8 +106,9 @@ export default function NewReportPage() {
 		body.set("report_type", reportType);
 		body.set("description", description.trim());
 		body.set("location_text", location.trim());
-		body.set("is_anonymous", String(isAnonymous));
-		body.set("is_private", String(isPrivate));
+		// Laravel rule "boolean" menerima 1/0 (bukan string "true"/"false").
+		body.set("is_anonymous", isAnonymous ? "1" : "0");
+		body.set("is_private", isPrivate ? "1" : "0");
 		if (categoryId) body.set("category_id", categoryId);
 		if (incidentDate) body.set("incident_date", incidentDate);
 		if (image) body.set("image", image);

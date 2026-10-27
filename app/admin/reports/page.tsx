@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import RequireUser from "@/components/RequireUser";
 import PortalLayout from "@/components/PortalLayout";
-import { useTheme } from "@/components/providers/AppProviders";
+import { useAuth, useTheme } from "@/components/providers/AppProviders";
 import Alert from "@/components/ui/Alert";
 import EmptyState from "@/components/ui/EmptyState";
 import LoadingState from "@/components/ui/LoadingState";
@@ -34,6 +34,7 @@ export default function AdminReportsPage() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState("");
 	const { isLightTheme } = useTheme();
+	const { user } = useAuth();
 
 	useEffect(() => {
 		apiRequest<Category[]>("categories")
@@ -48,6 +49,9 @@ export default function AdminReportsPage() {
 	}, []);
 
 	useEffect(() => {
+		// Antrean hanya untuk petugas; tunggu sesi siap agar tidak memicu 401/403
+		// palsu sebelum RequireUser melakukan pengecekan.
+		if (!user || user.role === "citizen") return;
 		const controller = new AbortController();
 		const query = toQueryString({
 			search: appliedSearch,
@@ -65,6 +69,7 @@ export default function AdminReportsPage() {
 					throw new Error("Respons antrean tidak menyertakan pagination.");
 				setReports(response.data);
 				setMeta(response.meta);
+				setError("");
 			})
 			.catch((cause: unknown) => {
 				if (!controller.signal.aborted)
@@ -78,7 +83,7 @@ export default function AdminReportsPage() {
 				if (!controller.signal.aborted) setIsLoading(false);
 			});
 		return () => controller.abort();
-	}, [appliedSearch, categoryId, page, priority, status]);
+	}, [appliedSearch, categoryId, page, priority, status, user]);
 
 	function handleSearch(event: FormEvent<HTMLFormElement>) {
 		event.preventDefault();

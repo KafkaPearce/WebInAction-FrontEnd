@@ -19,11 +19,16 @@ export default function ReportDetailPage({ id }: { id: string }) {
 	const { isLightTheme } = useTheme();
 
 	useEffect(() => {
+		// Detail laporan butuh sesi (backend: auth:sanctum). Tunggu sesi siap.
+		if (!user) return;
 		const controller = new AbortController();
 		apiRequest<Report>(`reports/${encodeURIComponent(id)}`, {
 			signal: controller.signal,
 		})
-			.then((response) => setReport(response.data))
+			.then((response) => {
+				setReport(response.data);
+				setError("");
+			})
 			.catch((cause: unknown) => {
 				if (!controller.signal.aborted)
 					setError(
@@ -36,7 +41,7 @@ export default function ReportDetailPage({ id }: { id: string }) {
 				if (!controller.signal.aborted) setIsLoading(false);
 			});
 		return () => controller.abort();
-	}, [id]);
+	}, [id, user]);
 
 	return (
 		<PortalLayout title="Detail laporan">

@@ -111,9 +111,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
 		}
 		setUser(null);
 		setError(null);
-		router.replace(redirectTo);
-		router.refresh();
-	}, [router, user]);
+		// Navigasi penuh (bukan router.replace) supaya RequireUser di halaman
+		// terproteksi tidak sempat me-redirect ke /login?next=... lebih dulu.
+		window.location.assign(redirectTo);
+	}, [user]);
 
 	const toggleTheme = useCallback(() => {
 		setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
